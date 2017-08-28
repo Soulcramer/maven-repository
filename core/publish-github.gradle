@@ -9,7 +9,7 @@ configurations {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
 
     deployLibrary "ar.com.synergian:wagon-git:0.3.0"
 }
@@ -60,7 +60,12 @@ uploadArchives {
 
     repositories.mavenDeployer {
         configuration = configurations.deployLibrary
-        repository(url: 'git:releases://git@github.com:' + COMPANY + '/' + REPOSITORY_NAME + '.git')
+        repository(url: 'git:releases://git@github.com:' + COMPANY + '/' + REPOSITORY_NAME + '.git'){
+            authentication(userName: "Soulcramer", password: 'Jete5u15')
+        }
+        snapshotRepository(url: 'git:snapshots://git@github.com:reversecoder/rc-samplelibrary-androidstudio.git'){
+            authentication(userName: "Soulcramer", password: 'Jete5u15')
+        }
 
         uniqueVersion = true
 
