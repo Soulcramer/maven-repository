@@ -5,7 +5,6 @@ buildscript {
     repositories {
         google()
         jcenter()
-        maven { url "https://raw.github.com/synergian/wagon-git/releases" }
 
     }
     dependencies {
@@ -22,7 +21,6 @@ allprojects {
     repositories {
         google()
         jcenter()
-        maven { url "https://raw.github.com/synergian/wagon-git/releases" }
         maven {
             credentials {
                 username USERNAME
