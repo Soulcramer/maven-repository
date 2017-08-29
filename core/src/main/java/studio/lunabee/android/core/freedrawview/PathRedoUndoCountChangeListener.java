@@ -1,4 +1,4 @@
-package studio.lunabee.android.core.fdv;
+package studio.lunabee.android.core.freedrawview;
 
 /**
  * Created by Riccardo on 22/11/16.

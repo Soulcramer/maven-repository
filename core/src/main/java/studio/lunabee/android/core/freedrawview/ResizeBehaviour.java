@@ -1,4 +1,4 @@
-package studio.lunabee.android.core.fdv;
+package studio.lunabee.android.core.freedrawview;
 
 /**
  * When RMFreeDrawView dimensions are changed, you can apply one of the following behaviours

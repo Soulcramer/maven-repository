@@ -20,6 +20,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import java.util.ArrayList;
 import java.util.Collections;
+
 import studio.lunabee.android.core.lunabeecore.R;
 
 public class FreeDrawView extends AppCompatImageView implements View.OnTouchListener {
