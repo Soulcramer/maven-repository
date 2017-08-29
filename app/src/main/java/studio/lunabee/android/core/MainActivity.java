@@ -2,13 +2,12 @@ package studio.lunabee.android.core;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import studio.lunabee.android.core.utils.ScreenUtils;
 
-public class MainActivity extends AppCompatActivity/*
-        implements View.OnClickListener, SeekBar.OnSeekBarChangeListener,
-        PathRedoUndoCountChangeListener, FreeDrawView.DrawCreatorListener, PathDrawnListener*/ {
+public class MainActivity extends AppCompatActivity
+        /*implements View.OnClickListener, SeekBar.OnSeekBarChangeListener, PathDrawnListener,
+        PathRedoUndoCountChangeListener, FreeDrawView.DrawCreatorListener*/ {
 
-    /*private static final String TAG = ActivityDraw.class.getSimpleName();
+    /*private static final String TAG = "MainActivity";
 
     private static final int THICKNESS_STEP = 2;
     private static final int THICKNESS_MAX = 80;
@@ -25,14 +24,13 @@ public class MainActivity extends AppCompatActivity/*
     private TextView mTxtRedoCount, mTxtUndoCount;
 
     private ImageView mImgScreen;
-    private Menu mMenu;*/
-
+    private Menu mMenu;
+*/
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        ScreenUtils.convertDpToPixel()
 
         /*mImgScreen = (ImageView) findViewById(R.id.img_screen);
 
@@ -231,6 +229,7 @@ public class MainActivity extends AppCompatActivity/*
 
     @Override
     public void onDrawCreationError() {
-        Toast.makeText(this, "Error, cannot create bitmap", Toast.LENGTH_SHORT).show();*/
+        Toast.makeText(this, "Error, cannot create bitmap", Toast.LENGTH_SHORT).show();
+    */
     }
 }

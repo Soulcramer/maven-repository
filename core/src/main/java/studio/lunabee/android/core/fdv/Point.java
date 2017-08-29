@@ -2,8 +2,9 @@ package studio.lunabee.android.core.fdv;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+import java.io.Serializable;
 
-class Point implements Parcelable {
+class Point implements Parcelable, Serializable {
 
     // Parcelable CREATOR class
     public static final Creator<Point> CREATOR = new Creator<Point>() {
@@ -17,12 +18,14 @@ class Point implements Parcelable {
             return new Point[size];
         }
     };
+    static final long serialVersionUID = 42L;
     float x, y;
 
     Point() {
         x = y = -1;
     }
 
+    // Parcelable stuff
     private Point(Parcel in) {
         x = in.readFloat();
         y = in.readFloat();
@@ -30,10 +33,9 @@ class Point implements Parcelable {
 
     @Override
     public String toString() {
-        return "" + x + "," + y;
+        return "" + x + " : " + y + " - ";
     }
 
-    // Parcelable stuff
     @Override
     public int describeContents() {
         return 0;

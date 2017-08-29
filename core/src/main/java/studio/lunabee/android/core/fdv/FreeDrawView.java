@@ -5,10 +5,9 @@ import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.ComposePathEffect;
-import android.graphics.CornerPathEffect;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.os.AsyncTask;
 import android.os.Parcelable;
 import android.support.annotation.ColorInt;
@@ -31,8 +30,8 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
     private static final int DEFAULT_COLOR = Color.BLACK;
     private static final int DEFAULT_ALPHA = 255;
 
-    private SerializablePaint mCurrentPaint;
-    private SerializablePath mCurrentPath;
+    private Paint mCurrentPaint;
+    private Path mCurrentPath;
 
     private ResizeBehaviour mResizeBehaviour;
 
@@ -84,18 +83,14 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
     }
 
     private void initPaints(TypedArray a) {
-        mCurrentPaint = new SerializablePaint(Paint.ANTI_ALIAS_FLAG);
-
+        mCurrentPaint = FreeDrawHelper.createPaint();
         mCurrentPaint.setColor(a != null ? a.getColor(R.styleable.FreeDrawView_paintColor, mPaintColor) : mPaintColor);
         mCurrentPaint.setAlpha(a != null ? a.getInt(R.styleable.FreeDrawView_paintAlpha, mPaintAlpha) : mPaintAlpha);
         mCurrentPaint.setStrokeWidth(a != null ? a.getDimensionPixelSize(R.styleable.FreeDrawView_paintWidth,
                 (int) FreeDrawHelper.convertDpToPixels(DEFAULT_STROKE_WIDTH))
                 : FreeDrawHelper.convertDpToPixels(DEFAULT_STROKE_WIDTH));
 
-        mCurrentPaint.setStrokeJoin(Paint.Join.ROUND);
-        mCurrentPaint.setStrokeCap(Paint.Cap.ROUND);
-        mCurrentPaint.setPathEffect(new ComposePathEffect(new CornerPathEffect(100f), new CornerPathEffect(100f)));
-        mCurrentPaint.setStyle(Paint.Style.STROKE);
+        FreeDrawHelper.setupStrokePaint(mCurrentPaint);
 
         if (a != null) {
             int resizeBehaviour = a.getInt(R.styleable.FreeDrawView_resizeBehaviour, -1);
@@ -110,30 +105,6 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
     private void initFillPaint() {
         mFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mFillPaint.setStyle(Paint.Style.FILL);
-    }
-
-    /**
-     * Get the current paint color without it's alpha
-     */
-    @ColorInt
-    public int getPaintColor() {
-        return mPaintColor;
-    }
-
-    /**
-     * Set the paint color
-     *
-     * @param color The now color to be applied to the
-     */
-    public void setPaintColor(@ColorInt int color) {
-        mFinishPath = true;
-
-        invalidate();
-
-        mPaintColor = color;
-
-        mCurrentPaint.setColor(mPaintColor);
-        mCurrentPaint.setAlpha(mPaintAlpha);// Restore the previous alpha
     }
 
     /**
@@ -156,7 +127,7 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
     }
 
     @Override
-    protected void onDraw(Canvas canvas) {
+    protected synchronized void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         if (mPaths.size() == 0 && mPoints.size() == 0) {
             return;
@@ -175,7 +146,7 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
 
                 setupFillPaint(currentPath.getPaint());
                 canvas.drawCircle(currentPath.getOriginX(), currentPath.getOriginY(),
-                        currentPath.getPaint().getStrokeWidth() / 2, mFillPaint);
+                        currentPath.getPaint().getStrokeWidth() / 2, currentPath.getPaint());
             } else {// Else draw the complete path
 
                 canvas.drawPath(currentPath.getPath(), currentPath.getPaint());
@@ -184,7 +155,7 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
 
         // Initialize the current path
         if (mCurrentPath == null) {
-            mCurrentPath = new SerializablePath();
+            mCurrentPath = new Path();
         } else {
             mCurrentPath.rewind();
         }
@@ -192,8 +163,8 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
         // If a single point, add a circle to the path
         if (mPoints.size() == 1 || FreeDrawHelper.isAPoint(mPoints)) {
 
-            setupFillPaint(mCurrentPaint);
-            canvas.drawCircle(mPoints.get(0).x, mPoints.get(0).y, mCurrentPaint.getStrokeWidth() / 2, mFillPaint);
+            canvas.drawCircle(mPoints.get(0).x, mPoints.get(0).y, mCurrentPaint.getStrokeWidth() / 2,
+                    createAndCopyColorAndAlphaForFillPaint(mCurrentPaint, false));
         } else if (mPoints.size() != 0) {// Else draw the complete series of points
 
             boolean first = true;
@@ -224,12 +195,22 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
         mFillPaint.setAlpha(from.getAlpha());
     }
 
+    private Paint createAndCopyColorAndAlphaForFillPaint(Paint from, boolean copyWidth) {
+        Paint paint = FreeDrawHelper.createPaint();
+        FreeDrawHelper.setupFillPaint(paint);
+        paint.setColor(from.getColor());
+        paint.setAlpha(from.getAlpha());
+        if (copyWidth) {
+            paint.setStrokeWidth(from.getStrokeWidth());
+        }
+        return paint;
+    }
+
     // Create a path from the current points
     private void createHistoryPathFromPoints() {
-        mPaths.add(new HistoryPath(new SerializablePath(mCurrentPath), new SerializablePaint(mCurrentPaint),
-                mPoints.get(0).x, mPoints.get(0).y, FreeDrawHelper.isAPoint(mPoints)));
+        mPaths.add(new HistoryPath(mPoints, new Paint(mCurrentPaint)));
 
-        mPoints.clear();
+        mPoints = new ArrayList<>();
 
         notifyPathDrawn();
         notifyRedoUndoCountChanged();
@@ -278,7 +259,6 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
      */
     public void setPaintWidthPx(@FloatRange(from = 0) float widthPx) {
         if (widthPx > 0) {
-            mFinishPath = true;
 
             invalidate();
 
@@ -287,11 +267,60 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
     }
 
     /**
+     * Get a serializable object with all the needed info about the current draw and state
+     *
+     * @return A {@link FreeDrawSerializableState} containing all the needed data
+     */
+    public FreeDrawSerializableState getCurrentViewStateAsSerializable() {
+
+        return new FreeDrawSerializableState(mCanceledPaths, mPaths, getPaintColor(), getPaintAlpha(), getPaintWidth(),
+                getResizeBehaviour(), mLastDimensionW, mLastDimensionH);
+    }
+
+    /**
+     * Get the current paint color without it's alpha
+     */
+    @ColorInt
+    public int getPaintColor() {
+        return mPaintColor;
+    }
+
+    /**
+     * Set the paint color
+     *
+     * @param color The now color to be applied to the
+     */
+    public void setPaintColor(@ColorInt int color) {
+
+        invalidate();
+
+        mPaintColor = color;
+
+        mCurrentPaint.setColor(mPaintColor);
+        mCurrentPaint.setAlpha(mPaintAlpha);// Restore the previous alpha
+    }
+
+    /**
+     * Get the current paint alpha
+     */
+    @IntRange(from = 0, to = 255)
+    public int getPaintAlpha() {
+        return mPaintAlpha;
+    }
+
+    /**
      * {@link #getPaintWith(boolean)}
      */
     @FloatRange(from = 0)
     public float getPaintWidth() {
         return getPaintWith(false);
+    }
+
+    /**
+     * Get the current behaviour on view resize
+     */
+    public ResizeBehaviour getResizeBehaviour() {
+        return mResizeBehaviour;
     }
 
     /**
@@ -307,11 +336,11 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
     }
 
     /**
-     * Get the current paint alpha
+     * Set what to do when the view is resized (on rotation if its dimensions are not fixed)
+     * {@link ResizeBehaviour}
      */
-    @IntRange(from = 0, to = 255)
-    public int getPaintAlpha() {
-        return mPaintAlpha;
+    public void setResizeBehaviour(ResizeBehaviour newBehaviour) {
+        mResizeBehaviour = newBehaviour;
     }
 
     /**
@@ -330,18 +359,43 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
     }
 
     /**
-     * Get the current behaviour on view resize
+     * Restore the state of the draw from the given serializable state
+     *
+     * @param state A {@link FreeDrawSerializableState} containing all the draw and paint info,
+     *              if null, nothing will be restored. Null sub fields will be ignored
      */
-    public ResizeBehaviour getResizeBehaviour() {
-        return mResizeBehaviour;
-    }
+    public void restoreStateFromSerializable(FreeDrawSerializableState state) {
 
-    /**
-     * Set what to do when the view is resized (on rotation if its dimensions are not fixed)
-     * {@link ResizeBehaviour}
-     */
-    public void setResizeBehaviour(ResizeBehaviour newBehaviour) {
-        mResizeBehaviour = newBehaviour;
+        if (state != null) {
+
+            if (state.getCanceledPaths() != null) {
+                mCanceledPaths = state.getCanceledPaths();
+            }
+
+            if (state.getPaths() != null) {
+                mPaths = state.getPaths();
+            }
+
+            mPaintColor = state.getPaintColor();
+            mPaintAlpha = state.getPaintAlpha();
+
+            mCurrentPaint.setColor(state.getPaintColor());
+            mCurrentPaint.setAlpha(state.getPaintAlpha());
+            setPaintWidthPx(state.getPaintWidth());
+
+            mResizeBehaviour = state.getResizeBehaviour();
+
+            if (state.getLastDimensionW() >= 0) {
+                mLastDimensionW = state.getLastDimensionW();
+            }
+
+            if (state.getLastDimensionH() >= 0) {
+                mLastDimensionH = state.getLastDimensionH();
+            }
+
+            notifyRedoUndoCountChanged();
+            invalidate();
+        }
     }
 
     /**
@@ -383,7 +437,7 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
     public void undoAll() {
         Collections.reverse(mPaths);
         mCanceledPaths.addAll(mPaths);
-        mPaths.clear();
+        mPaths = new ArrayList<>();
         invalidate();
 
         notifyRedoUndoCountChanged();
@@ -396,10 +450,70 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
 
         if (mCanceledPaths.size() > 0) {
             mPaths.addAll(mCanceledPaths);
-            mCanceledPaths.clear();
+            mCanceledPaths = new ArrayList<>();
             invalidate();
 
             notifyRedoUndoCountChanged();
+        }
+    }
+
+    /**
+     * Get how many paths are drawn on this FreeDrawView
+     *
+     * @param includeCurrentlyDrawingPath Include the path that is currently been drawn
+     * @return The number of paths drawn
+     */
+    public int getPathCount(boolean includeCurrentlyDrawingPath) {
+        int size = mPaths.size();
+
+        if (includeCurrentlyDrawingPath && mPoints.size() > 0) {
+            size++;
+        }
+        return size;
+    }
+
+    /**
+     * Clear the current draw and the history
+     */
+    public void clearDrawAndHistory() {
+
+        clearDraw(false);
+        clearHistory(true);
+    }
+
+    /**
+     * Clear the current draw
+     */
+    public void clearDraw() {
+
+        clearDraw(true);
+    }
+
+    private void clearDraw(boolean invalidate) {
+        mPoints = new ArrayList<>();
+        mPaths = new ArrayList<>();
+
+        notifyRedoUndoCountChanged();
+
+        if (invalidate) {
+            invalidate();
+        }
+    }
+
+    /**
+     * Clear the history (paths that can be redone)
+     */
+    public void clearHistory() {
+        clearHistory(true);
+    }
+
+    private void clearHistory(boolean invalidate) {
+        mCanceledPaths = new ArrayList<>();
+
+        notifyRedoUndoCountChanged();
+
+        if (invalidate) {
+            invalidate();
         }
     }
 
@@ -450,7 +564,7 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
         }
 
         // Clear all the history when restarting to draw
-        mCanceledPaths.clear();
+        mCanceledPaths = new ArrayList<>();
 
         if ((motionEvent.getAction() != MotionEvent.ACTION_UP) && (motionEvent.getAction()
                 != MotionEvent.ACTION_CANCEL)) {
@@ -460,6 +574,7 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
                 point.x = motionEvent.getHistoricalX(i);
                 point.y = motionEvent.getHistoricalY(i);
                 mPoints.add(point);
+                mFinishPath = false;
             }
             point = new Point();
             point.x = motionEvent.getX();
@@ -518,8 +633,8 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
             createHistoryPathFromPoints();
         }
 
-        return new FreeDrawSavedState(superState, mPaths, mCanceledPaths, mCurrentPaint, mPaintColor, mPaintAlpha,
-                mResizeBehaviour, mLastDimensionW, mLastDimensionH);
+        return new FreeDrawSavedState(superState, mPaths, mCanceledPaths, getPaintWidth(), getPaintColor(),
+                getPaintAlpha(), getResizeBehaviour(), mLastDimensionW, mLastDimensionH);
     }
 
     @Override
@@ -540,12 +655,12 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
         mCanceledPaths = savedState.getCanceledPaths();
         mCurrentPaint = savedState.getCurrentPaint();
 
-        initFillPaint();
+        setPaintWidthPx(savedState.getCurrentPaintWidth());
+        setPaintColor(savedState.getPaintColor());
+        setPaintAlpha(savedState.getPaintAlpha());
 
-        mResizeBehaviour = savedState.getResizeBehaviour();
+        setResizeBehaviour(savedState.getResizeBehaviour());
 
-        mPaintColor = savedState.getPaintColor();
-        mPaintAlpha = savedState.getPaintAlpha();
         // Restore the last dimensions, so that in onSizeChanged i can calculate the
         // height and width change factor and multiply every point x or y to it, so that if the
         // View is resized, it adapt automatically it's points to the new width/height
@@ -566,9 +681,9 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
         }
 
         if (mResizeBehaviour == ResizeBehaviour.CLEAR) {// If clear, clear all and return
-            mPaths.clear();
-            mCanceledPaths.clear();
-            mPoints.clear();
+            mPaths = new ArrayList<>();
+            mCanceledPaths = new ArrayList<>();
+            mPoints = new ArrayList<>();
             return;
         } else if (mResizeBehaviour == ResizeBehaviour.CROP) {
             xMultiplyFactor = yMultiplyFactor = 1;
@@ -577,36 +692,39 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
         // Adapt drawn paths
         for (HistoryPath historyPath : mPaths) {
 
-            multiplySinglePath(historyPath, xMultiplyFactor, yMultiplyFactor);
+            if (historyPath.isPoint()) {
+                historyPath.setOriginX(historyPath.getOriginX() * xMultiplyFactor);
+                historyPath.setOriginY(historyPath.getOriginY() * yMultiplyFactor);
+            } else {
+                for (Point point : historyPath.getPoints()) {
+                    point.x *= xMultiplyFactor;
+                    point.y *= yMultiplyFactor;
+                }
+            }
+
+            historyPath.generatePath();
         }
 
         // Adapt canceled paths
         for (HistoryPath historyPath : mCanceledPaths) {
 
-            multiplySinglePath(historyPath, xMultiplyFactor, yMultiplyFactor);
+            if (historyPath.isPoint()) {
+                historyPath.setOriginX(historyPath.getOriginX() * xMultiplyFactor);
+                historyPath.setOriginY(historyPath.getOriginY() * yMultiplyFactor);
+            } else {
+                for (Point point : historyPath.getPoints()) {
+                    point.x *= xMultiplyFactor;
+                    point.y *= yMultiplyFactor;
+                }
+            }
+
+            historyPath.generatePath();
         }
 
         // Adapt drawn points
         for (Point point : mPoints) {
             point.x *= xMultiplyFactor;
             point.y *= yMultiplyFactor;
-        }
-    }
-
-    private void multiplySinglePath(HistoryPath historyPath, float xMultiplyFactor, float yMultiplyFactor) {
-
-        // If it's a point, just multiply it's origins
-        if (historyPath.isPoint()) {
-            historyPath.setOriginX(historyPath.getOriginX() * xMultiplyFactor);
-            historyPath.setOriginY(historyPath.getOriginY() * yMultiplyFactor);
-        } else {
-
-            // Doing this because of android, which has a problem with
-            // multiple path transformations
-            SerializablePath scaledPath = new SerializablePath();
-            scaledPath.addPath(historyPath.getPath(), new TranslateMatrix(xMultiplyFactor, yMultiplyFactor));
-            historyPath.getPath().close();
-            historyPath.setPath(scaledPath);
         }
     }
 
@@ -617,7 +735,7 @@ public class FreeDrawView extends AppCompatImageView implements View.OnTouchList
         void onDrawCreationError();
     }
 
-    class TakeScreenShotAsyncTask extends AsyncTask<Void, Void, Void> {
+    private class TakeScreenShotAsyncTask extends AsyncTask<Void, Void, Void> {
 
         private int mWidth, mHeight;
         private Canvas mCanvas;

@@ -1,11 +1,16 @@
 package studio.lunabee.android.core.fdv;
 
+import android.graphics.Paint;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.annotation.ColorInt;
 import android.support.annotation.IntRange;
 import android.view.View;
 import java.util.ArrayList;
+
+/**
+ * Created by Riccardo Moro on 11/4/2016.
+ */
 
 class FreeDrawSavedState extends View.BaseSavedState {
 
@@ -19,23 +24,22 @@ class FreeDrawSavedState extends View.BaseSavedState {
             return new FreeDrawSavedState[size];
         }
     };
-    private ArrayList<HistoryPath> mCanceledPaths;
-    private ArrayList<HistoryPath> mPaths;
-    private SerializablePaint mCurrentPaint;
+    private ArrayList<HistoryPath> mPaths = new ArrayList<>();
+    private ArrayList<HistoryPath> mCanceledPaths = new ArrayList<>();
     private int mPaintColor;
     private int mPaintAlpha;
+    private float mPaintWidth;
     private ResizeBehaviour mResizeBehaviour;
     private int mLastDimensionW;
     private int mLastDimensionH;
 
     FreeDrawSavedState(Parcelable superState, ArrayList<HistoryPath> paths, ArrayList<HistoryPath> canceledPaths,
-            SerializablePaint currentPaint, int paintColor, int paintAlpha, ResizeBehaviour resizeBehaviour,
-            int lastDimensionW, int lastDimensionH) {
+            float paintWidth, int paintColor, int paintAlpha, ResizeBehaviour resizeBehaviour, int lastDimensionW, int lastDimensionH) {
         super(superState);
 
         mPaths = paths;
         mCanceledPaths = canceledPaths;
-        mCurrentPaint = currentPaint;
+        mPaintWidth = paintWidth;
 
         mPaintColor = paintColor;
         mPaintAlpha = paintAlpha;
@@ -46,37 +50,21 @@ class FreeDrawSavedState extends View.BaseSavedState {
         mLastDimensionH = lastDimensionH;
     }
 
+    // Parcelable stuff
     private FreeDrawSavedState(Parcel in) {
         super(in);
-        try {
-            mPaths = in.readArrayList(HistoryPath.class.getClassLoader());
-            mCanceledPaths = in.readArrayList(HistoryPath.class.getClassLoader());
 
-            mPaintColor = in.readInt();
-            mPaintAlpha = in.readInt();
+        in.readTypedList(mPaths, HistoryPath.CREATOR);
+        in.readTypedList(mCanceledPaths, HistoryPath.CREATOR);
 
-            mResizeBehaviour = (ResizeBehaviour) in.readSerializable();
+        mPaintColor = in.readInt();
+        mPaintAlpha = in.readInt();
+        mPaintWidth = in.readFloat();
 
-            mLastDimensionW = in.readInt();
-            mLastDimensionH = in.readInt();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+        mResizeBehaviour = (ResizeBehaviour) in.readSerializable();
 
-    @Override
-    public void writeToParcel(Parcel out, int flags) {
-        super.writeToParcel(out, flags);
-        out.writeTypedList(mPaths);
-        out.writeTypedList(mCanceledPaths);
-
-        out.writeInt(mPaintColor);
-        out.writeInt(mPaintAlpha);
-
-        out.writeSerializable(mResizeBehaviour);
-
-        out.writeInt(mLastDimensionW);
-        out.writeInt(mLastDimensionH);
+        mLastDimensionW = in.readInt();
+        mLastDimensionH = in.readInt();
     }
 
     ArrayList<HistoryPath> getPaths() {
@@ -85,10 +73,6 @@ class FreeDrawSavedState extends View.BaseSavedState {
 
     ArrayList<HistoryPath> getCanceledPaths() {
         return mCanceledPaths;
-    }
-
-    SerializablePaint getCurrentPaint() {
-        return mCurrentPaint;
     }
 
     @ColorInt
@@ -101,6 +85,18 @@ class FreeDrawSavedState extends View.BaseSavedState {
         return mPaintAlpha;
     }
 
+    float getCurrentPaintWidth() {
+        return mPaintWidth;
+    }
+
+    Paint getCurrentPaint() {
+
+        Paint paint = FreeDrawHelper.createPaint();
+        FreeDrawHelper.setupStrokePaint(paint);
+        FreeDrawHelper.copyFromValues(paint, mPaintColor, mPaintAlpha, mPaintWidth, true);
+        return paint;
+    }
+
     ResizeBehaviour getResizeBehaviour() {
         return mResizeBehaviour;
     }
@@ -111,5 +107,22 @@ class FreeDrawSavedState extends View.BaseSavedState {
 
     int getLastDimensionH() {
         return mLastDimensionH;
+    }
+
+    @Override
+    public void writeToParcel(Parcel out, int flags) {
+        super.writeToParcel(out, flags);
+
+        out.writeTypedList(mPaths);
+        out.writeTypedList(mCanceledPaths);
+
+        out.writeInt(mPaintColor);
+        out.writeInt(mPaintAlpha);
+        out.writeFloat(mPaintWidth);
+
+        out.writeSerializable(mResizeBehaviour);
+
+        out.writeInt(mLastDimensionW);
+        out.writeInt(mLastDimensionH);
     }
 }
