@@ -1,13 +1,24 @@
 package studio.lunabee.android.core;
 
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.view.Menu;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.SeekBar;
+import android.widget.TextView;
+import android.widget.Toast;
+import studio.lunabee.android.core.fdv.FreeDrawView;
+import studio.lunabee.android.core.fdv.PathDrawnListener;
+import studio.lunabee.android.core.fdv.PathRedoUndoCountChangeListener;
 
 public class MainActivity extends AppCompatActivity
-        /*implements View.OnClickListener, SeekBar.OnSeekBarChangeListener, PathDrawnListener,
-        PathRedoUndoCountChangeListener, FreeDrawView.DrawCreatorListener*/ {
+        implements View.OnClickListener, SeekBar.OnSeekBarChangeListener, PathDrawnListener,
+        PathRedoUndoCountChangeListener, FreeDrawView.DrawCreatorListener {
 
-    /*private static final String TAG = "MainActivity";
+    private static final String TAG = "MainActivity";
 
     private static final int THICKNESS_STEP = 2;
     private static final int THICKNESS_MAX = 80;
@@ -25,14 +36,14 @@ public class MainActivity extends AppCompatActivity
 
     private ImageView mImgScreen;
     private Menu mMenu;
-*/
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
 
-        /*mImgScreen = (ImageView) findViewById(R.id.img_screen);
+        mImgScreen = (ImageView) findViewById(R.id.img_screen);
 
         mTxtRedoCount = (TextView) findViewById(R.id.txt_redo_count);
         mTxtUndoCount = (TextView) findViewById(R.id.txt_undo_count);
@@ -57,15 +68,6 @@ public class MainActivity extends AppCompatActivity
         mBtnRedo.setOnClickListener(this);
         mBtnClearAll.setOnClickListener(this);
 
-        if (savedInstanceState == null) {
-
-            // Restore the previous saved state
-            FreeDrawSerializableState state = FileHelper.getSavedStoreFromFile(this);
-            if (state != null) {
-                mFreeDrawView.restoreStateFromSerializable(state);
-            }
-        }
-
         mAlphaBar.setMax((ALPHA_MAX - ALPHA_MIN) / ALPHA_STEP);
         int alphaProgress = ((mFreeDrawView.getPaintAlpha() - ALPHA_MIN) / ALPHA_STEP);
         mAlphaBar.setProgress(alphaProgress);
@@ -79,31 +81,6 @@ public class MainActivity extends AppCompatActivity
         mSideView.setBackgroundColor(mFreeDrawView.getPaintColor());
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-
-        mMenu = menu;
-
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-
-        if (item.getItemId() == R.id.menu_screen) {
-            takeAndShowScreenshot();
-            return true;
-        }
-
-        if (item.getItemId() == android.R.id.home) {
-            onBackPressed();
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
 
     private void takeAndShowScreenshot() {
 
@@ -116,7 +93,6 @@ public class MainActivity extends AppCompatActivity
     protected void onPause() {
         super.onPause();
 
-        FileHelper.saveStateIntoFile(this, mFreeDrawView.getCurrentViewStateAsSerializable());
     }
 
     @Override
@@ -127,9 +103,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void changeColor() {
-        int color = ColorHelper.getRandomMaterialColor(this);
 
-        mFreeDrawView.setPaintColor(color);
 
         mSideView.setBackgroundColor(mFreeDrawView.getPaintColor());
     }
@@ -178,7 +152,6 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onBackPressed() {
         if (mImgScreen.getVisibility() == View.VISIBLE) {
-            mMenu.findItem(R.id.menu_screen).setVisible(true);
             mImgScreen.setImageBitmap(null);
             mImgScreen.setVisibility(View.GONE);
 
@@ -220,8 +193,6 @@ public class MainActivity extends AppCompatActivity
         mSideView.setVisibility(View.GONE);
         mFreeDrawView.setVisibility(View.GONE);
 
-        mMenu.findItem(R.id.menu_screen).setVisible(false);
-
         mImgScreen.setVisibility(View.VISIBLE);
 
         mImgScreen.setImageBitmap(draw);
@@ -230,6 +201,6 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onDrawCreationError() {
         Toast.makeText(this, "Error, cannot create bitmap", Toast.LENGTH_SHORT).show();
-    */
+
     }
 }

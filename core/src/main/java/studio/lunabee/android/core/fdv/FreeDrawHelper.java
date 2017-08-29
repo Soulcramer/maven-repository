@@ -1,4 +1,4 @@
-package studio.lunabee.android.core.fdv;
+package studio.lunabee.android.core.freedrawview;
 
 import android.content.res.Resources;
 import android.graphics.ComposePathEffect;
