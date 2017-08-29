@@ -9,7 +9,7 @@ configurations {
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(dir: 'libs', include: ['*.jar'])
 
     deployLibrary "ar.com.synergian:wagon-git:0.3.0"
 }
@@ -38,7 +38,8 @@ task lookForArtifacts {
     doLast {
         def artifactName = ARTIFACT_NAME + '-' + ARTIFACT_VERSION + '.aar'
         def artifactPath = ARTIFACT_PACKAGE.replace(".", "/") + "/" + ARTIFACT_NAME + "/" + ARTIFACT_VERSION + "/" + artifactName
-        def repositoryUrl = 'https://github.com/' + COMPANY + '/' + REPOSITORY_NAME + '/tree/releases/' + artifactPath
+        def repositoryUrl = 'https://raw.'+ REPOSITORY_URL +'/' + COMPANY + '/' + REPOSITORY_NAME + '/releases/' + artifactPath
+
         println("")
         println("Checking if artifact already exists: " + artifactName)
         println("at URL: " + repositoryUrl)
@@ -60,12 +61,9 @@ uploadArchives {
 
     repositories.mavenDeployer {
         configuration = configurations.deployLibrary
-        repository(url: 'git:releases://git@github.com:' + COMPANY + '/' + REPOSITORY_NAME + '.git'){
-            authentication(userName: "Soulcramer", password: 'Jete5u15')
-        }
-        snapshotRepository(url: 'git:snapshots://git@github.com:reversecoder/rc-samplelibrary-androidstudio.git'){
-            authentication(userName: "Soulcramer", password: 'Jete5u15')
-        }
+
+        repository(url: 'git:releases://https://'+ REPOSITORY_URL +'/'+COMPANY+'/'+REPOSITORY_NAME+'.git')
+        //repository(url: 'git:releases://git@'+ REPOSITORY_URL +':'+COMPANY+'/'+REPOSITORY_NAME+'.git'){
 
         uniqueVersion = true
 
@@ -92,7 +90,7 @@ def urlExists(String repositoryUrl) {
         println("responseCode: " + responseCode)
 
         if (responseCode == 401) {
-            throw new RuntimeException("Unauthorized Github user - please provide valid username and password in gradle.properties file")
+            throw new RuntimeException("Unauthorized BitBucket user - please provide valid username and password in gradle.properties file")
         }
 
         return (200 == responseCode)
